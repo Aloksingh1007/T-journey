@@ -1,0 +1,491 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User Model
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String
+  name          String?
+  
+  // Password Reset
+  resetToken        String?
+  resetTokenExpiry  DateTime?
+  
+  // Profile Information
+  bio           String?   @db.Text
+  avatar        String?   // URL to avatar image
+  tradingStyle  TradingStyle?
+  experienceLevel ExperienceLevel?
+  
+  // Privacy Settings
+  profileVisibility ProfileVisibility @default(PRIVATE)
+  shareStats        Boolean @default(false)
+  shareTrades       Boolean @default(false)
+  shareEmotions     Boolean @default(false)
+  sharePatterns     Boolean @default(false)
+  
+  // Profile Statistics (cached for performance)
+  totalTrades       Int @default(0)
+  winRate           Decimal @default(0) @db.Decimal(5, 2)
+  totalPnL          Decimal @default(0) @db.Decimal(18, 2)
+  currentStreak     Int @default(0) // Positive for win streak, negative for loss streak
+  longestWinStreak  Int @default(0)
+  bestTradeDate     DateTime?
+  
+  // Achievement Badges
+  badges            Json @default("[]") // Array of badge objects
+  milestones        Json @default("{}") // Object with milestone progress
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  trades        Trade[]
+  comments      PostComment[] @relation("UserComments")
+  
+  @@map("users")
+}
+
+// Trade Model
+model Trade {
+  id                String        @id @default(uuid())
+  userId            String
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Core Trade Information
+  tradeDate         DateTime
+  entryTime         String        // Stored as HH:MM format
+  exitTime          String        // Stored as HH:MM format
+  tradeType         TradeType     // CRYPTO, STOCK, FUTURES, OPTIONS, FUNDED_ACCOUNT
+  instrument        String        // e.g., "BTC/USDT", "AAPL", "NIFTY"
+  
+  // Trade Direction & Type
+  tradeDirection    TradeDirection // BUY_LONG, SELL_SHORT
+  optionType        OptionType?   // CALL, PUT (only for options)
+  
+  // Pricing & Position
+  avgBuyPrice       Decimal       @db.Decimal(18, 8)
+  avgSellPrice      Decimal       @db.Decimal(18, 8)
+  positionSize      Decimal       @db.Decimal(18, 8)
+  leverage          Decimal       @default(1) @db.Decimal(5, 2)
+  originalCapital   Decimal?      @db.Decimal(18, 2)
+  
+  // P&L & Currency
+  baseCurrency      Currency      @default(INR)
+  pnl               Decimal       @db.Decimal(18, 2)
+  pnlPercentage     Decimal?      @db.Decimal(8, 4)
+  
+  // Emotional & Behavioral Data
+  emotionalState    EmotionalState
+  isImpulsive       Boolean       @default(false)
+  
+  // Pre-Trade Psychology & Planning
+  setupConfidence   Int?          // 1-10 scale
+  marketCondition   String?       // Trending Up, Trending Down, Sideways, Volatile, Calm
+  timeOfDay         String?       // Pre-Market, Market Open, Mid-Day, Market Close, After-Hours
+  newsImpact        String?       // Major News, Earnings, Economic Data, Technical Setup, None
+  strategy          String?       // Breakout, Pullback, Reversal, Momentum, etc.
+  riskRewardRatio   Decimal?      @db.Decimal(8, 2)
+  stopLossPrice     Decimal?      @db.Decimal(18, 8)
+  takeProfitPrice   Decimal?      @db.Decimal(18, 8)
+  positionSizingReason String?    // Risk Management, Account Size, Volatility, Conviction Level
+  
+  // Entry Decision
+  entryTrigger      String?       // Technical Signal, Price Action, Indicator, News, FOMO, etc.
+  hadHesitation     Boolean?
+  deviatedFromPlan  Boolean?
+  deviationReason   String?       @db.Text
+  
+  // During Trade
+  monitoringFrequency String?     // Constantly, Every Hour, Few Times, Set and Forget
+  stressLevel       Int?          // 1-10 scale
+  consideredEarlyExit Boolean?
+  earlyExitReason   String?       @db.Text
+  
+  // Exit Decision
+  exitReason        String?       // Hit Target, Hit Stop Loss, Time-based, Fear, Greed, etc.
+  exitSatisfaction  Int?          // 1-10 scale
+  wouldDoDifferently String?      @db.Text
+  
+  // Post-Trade Reflection
+  keyLesson         String?       @db.Text
+  mistakesMade      String[]      // Array of mistakes
+  whatWentWell      String?       @db.Text
+  conditionsMatchExpectation Boolean?
+  
+  // Additional Context
+  sessionQuality    Int?          // 1-10 scale
+  physicalState     String?       // Well-rested, Tired, Sick, Energetic
+  mentalState       String?       // Focused, Distracted, Stressed, Calm, Anxious
+  externalFactors   String[]      // Work Stress, Personal Issues, Financial Pressure, None
+  
+  // Optional Fields
+  initialNotes      String?       @db.Text
+  notes             Note[]
+  screenshots       Screenshot[]
+  
+  // AI Analysis (Phase 2)
+  aiInsights        String?       @db.Text
+  sentimentScore    Decimal?      @db.Decimal(5, 4)
+  
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  
+  @@index([userId, tradeDate])
+  @@index([userId, baseCurrency])
+  @@index([userId, tradeType])
+  @@index([userId, emotionalState])
+  @@map("trades")
+}
+
+// Note Model
+model Note {
+  id          String    @id @default(uuid())
+  tradeId     String
+  trade       Trade     @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  content     String    @db.Text
+  createdAt   DateTime  @default(now())
+  
+  @@map("notes")
+}
+
+// Screenshot Model
+model Screenshot {
+  id          String    @id @default(uuid())
+  tradeId     String
+  trade       Trade     @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  filename    String
+  url         String
+  fileSize    Int
+  mimeType    String
+  createdAt   DateTime  @default(now())
+  
+  @@map("screenshots")
+}
+
+// Enums
+enum TradeType {
+  CRYPTO
+  STOCK
+  FUTURES
+  OPTIONS
+  FUNDED_ACCOUNT
+}
+
+enum TradeDirection {
+  BUY_LONG
+  SELL_SHORT
+}
+
+enum OptionType {
+  CALL
+  PUT
+}
+
+enum Currency {
+  INR
+  USD
+}
+
+enum EmotionalState {
+  CONFIDENT
+  FEARFUL
+  GREEDY
+  ANXIOUS
+  NEUTRAL
+  EXCITED
+  FRUSTRATED
+}
+
+enum TradingStyle {
+  DAY_TRADER
+  SWING_TRADER
+  SCALPER
+  POSITION_TRADER
+  ALGORITHMIC
+  HYBRID
+}
+
+enum ExperienceLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum ProfileVisibility {
+  PUBLIC
+  PRIVATE
+  FRIENDS_ONLY
+}
+
+// Analytics Event Model - Track all user interactions
+model AnalyticsEvent {
+  id            String    @id @default(uuid())
+  userId        String
+  eventType     String    // "trade_created", "emotion_analyzed", "pattern_detected", etc.
+  eventData     Json      // Flexible JSON storage for event-specific data
+  sessionId     String?   // Track user sessions
+  ipAddress     String?   // For fraud detection (anonymized in aggregation)
+  userAgent     String?   // Browser/device info
+  timestamp     DateTime  @default(now())
+  
+  @@index([userId, timestamp])
+  @@index([eventType, timestamp])
+  @@index([sessionId])
+  @@map("analytics_events")
+}
+
+// AI Insight Model - Store all AI-generated insights
+model AIInsight {
+  id                String    @id @default(uuid())
+  userId            String
+  tradeId           String?
+  insightType       String    // "emotion_pattern", "risk_alert", "performance_forecast", "auto_insight"
+  insightData       Json      // The actual insight content
+  confidence        Float?    // AI confidence score (0-1)
+  wasShown          Boolean   @default(true)
+  wasHelpful        Boolean?  // User feedback
+  userFeedback      String?   // Optional text feedback
+  actionTaken       String?   // What action user took after seeing insight
+  timestamp         DateTime  @default(now())
+  
+  @@index([userId, insightType])
+  @@index([insightType, timestamp])
+  @@index([tradeId])
+  @@map("ai_insights")
+}
+
+// Pattern Occurrence Model - Track detected patterns
+model PatternOccurrence {
+  id              String    @id @default(uuid())
+  userId          String
+  tradeId         String
+  patternType     String    // "revenge_trading", "fomo", "overconfident", etc.
+  severity        Float     // 0-1 scale
+  wasWarned       Boolean   @default(false)  // Did we warn the user?
+  warningHeeded   Boolean?  // Did user heed the warning?
+  outcome         String    // "win", "loss"
+  pnl             Decimal   @db.Decimal(18, 2)
+  emotionalState  String    // Emotional state during pattern
+  timestamp       DateTime  @default(now())
+  
+  @@index([userId, patternType])
+  @@index([patternType, timestamp])
+  @@index([tradeId])
+  @@map("pattern_occurrences")
+}
+
+// User Session Model - Track user sessions for engagement analysis
+model UserSession {
+  id              String    @id @default(uuid())
+  userId          String
+  sessionStart    DateTime  @default(now())
+  sessionEnd      DateTime?
+  duration        Int?      // Duration in seconds
+  pagesVisited    Int       @default(0)
+  tradesLogged    Int       @default(0)
+  insightsViewed  Int       @default(0)
+  deviceType      String?   // "desktop", "mobile", "tablet"
+  
+  @@index([userId, sessionStart])
+  @@map("user_sessions")
+}
+
+// Daily Aggregate Stats Model - Rollup for analytics dashboard
+model DailyAggregateStats {
+  id                      String    @id @default(uuid())
+  date                    DateTime  @unique
+  totalUsers              Int       @default(0)
+  activeUsers             Int       @default(0)
+  newUsers                Int       @default(0)
+  totalTrades             Int       @default(0)
+  totalAIInsights         Int       @default(0)
+  totalPatterns           Int       @default(0)
+  avgWinRate              Float     @default(0)
+  avgPnL                  Decimal   @default(0) @db.Decimal(18, 2)
+  emotionDistribution     Json      // {"CONFIDENT": 0.3, "FEARFUL": 0.2, ...}
+  patternFrequency        Json      // {"revenge_trading": 45, "fomo": 32, ...}
+  topPatterns             Json      // Most common patterns with details
+  insightEffectiveness    Json      // Insight type -> helpfulness rate
+  
+  @@index([date])
+  @@map("daily_aggregate_stats")
+}
+
+// User Feedback Model - Collect user feedback on features
+model UserFeedback {
+  id              String    @id @default(uuid())
+  userId          String
+  feedbackType    String    // "feature_request", "bug_report", "insight_feedback", "general"
+  rating          Int?      // 1-5 stars
+  message         String    @db.Text
+  context         Json?     // Additional context (page, feature, etc.)
+  status          String    @default("new") // "new", "reviewed", "resolved"
+  timestamp       DateTime  @default(now())
+  
+  @@index([userId, timestamp])
+  @@index([feedbackType, status])
+  @@map("user_feedback")
+}
+
+// Community Post Model - User posts in the community
+model CommunityPost {
+  id              String    @id @default(uuid())
+  userId          String
+  postType        PostType  // ACHIEVEMENT, INSIGHT, QUESTION, TRADE_BREAKDOWN
+  title           String?
+  content         String    @db.Text
+  tradeId         String?   // Reference to a trade if sharing trade breakdown
+  images          String[]  // Array of image URLs
+  
+  // Engagement metrics
+  likesCount      Int       @default(0)
+  commentsCount   Int       @default(0)
+  
+  // Moderation
+  isReported      Boolean   @default(false)
+  reportCount     Int       @default(0)
+  isHidden        Boolean   @default(false)
+  moderationNotes String?   @db.Text
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  likes           PostLike[]
+  comments        PostComment[]
+  reports         PostReport[]
+  
+  @@index([userId, createdAt])
+  @@index([postType, createdAt])
+  @@index([tradeId])
+  @@map("community_posts")
+}
+
+// Post Like Model
+model PostLike {
+  id              String    @id @default(uuid())
+  postId          String
+  userId          String
+  post            CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt       DateTime  @default(now())
+  
+  @@unique([postId, userId])
+  @@index([userId])
+  @@map("post_likes")
+}
+
+// Post Comment Model
+model PostComment {
+  id              String    @id @default(uuid())
+  postId          String
+  userId          String
+  content         String    @db.Text
+  post            CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user            User      @relation("UserComments", fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Moderation
+  isReported      Boolean   @default(false)
+  isHidden        Boolean   @default(false)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([postId, createdAt])
+  @@index([userId])
+  @@map("post_comments")
+}
+
+// Post Report Model - For moderation
+model PostReport {
+  id              String    @id @default(uuid())
+  postId          String
+  reportedBy      String    // userId of reporter
+  reason          String    // "spam", "inappropriate", "harassment", "other"
+  description     String?   @db.Text
+  post            CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  status          String    @default("pending") // "pending", "reviewed", "resolved"
+  createdAt       DateTime  @default(now())
+  
+  @@index([postId])
+  @@index([reportedBy])
+  @@index([status])
+  @@map("post_reports")
+}
+
+// User Follow Model - Follow/Following relationships
+model UserFollow {
+  id              String    @id @default(uuid())
+  followerId      String    // User who is following
+  followingId     String    // User being followed
+  createdAt       DateTime  @default(now())
+  
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@map("user_follows")
+}
+
+// Leaderboard Entry Model - Cached leaderboard data
+model LeaderboardEntry {
+  id              String    @id @default(uuid())
+  userId          String
+  leaderboardType String    // "trader_score", "win_rate", "consistency", "total_pnl"
+  rank            Int
+  score           Decimal   @db.Decimal(18, 4)
+  metadata        Json?     // Additional data like streak, trades count, etc.
+  period          String    // "all_time", "monthly", "weekly"
+  periodStart     DateTime
+  periodEnd       DateTime
+  updatedAt       DateTime  @updatedAt
+  
+  @@unique([userId, leaderboardType, period, periodStart])
+  @@index([leaderboardType, period, rank])
+  @@index([userId])
+  @@map("leaderboard_entries")
+}
+
+// Enum for Post Types
+enum PostType {
+  ACHIEVEMENT
+  INSIGHT
+  QUESTION
+  TRADE_BREAKDOWN
+}
+
+// Notification Model - For community interactions
+model Notification {
+  id              String    @id @default(uuid())
+  userId          String    // User who receives the notification
+  type            NotificationType
+  title           String
+  message         String    @db.Text
+  actionUrl       String?   // URL to navigate to when clicked
+  isRead          Boolean   @default(false)
+  metadata        Json?     // Additional data (actorId, postId, etc.)
+  createdAt       DateTime  @default(now())
+  readAt          DateTime?
+  
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@index([type])
+  @@map("notifications")
+}
+
+// Enum for Notification Types
+enum NotificationType {
+  POST_LIKE
+  POST_COMMENT
+  COMMENT_REPLY
+  NEW_FOLLOWER
+  POST_MENTION
+  ACHIEVEMENT_UNLOCKED
+}

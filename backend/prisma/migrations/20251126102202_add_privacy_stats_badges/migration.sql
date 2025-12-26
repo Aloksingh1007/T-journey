@@ -1,0 +1,17 @@
+-- CreateEnum
+CREATE TYPE "ProfileVisibility" AS ENUM ('PUBLIC', 'PRIVATE', 'FRIENDS_ONLY');
+
+-- AlterTable
+ALTER TABLE "users" ADD COLUMN     "badges" JSONB NOT NULL DEFAULT '[]',
+ADD COLUMN     "bestTradeDate" TIMESTAMP(3),
+ADD COLUMN     "currentStreak" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "longestWinStreak" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "milestones" JSONB NOT NULL DEFAULT '{}',
+ADD COLUMN     "profileVisibility" "ProfileVisibility" NOT NULL DEFAULT 'PRIVATE',
+ADD COLUMN     "shareEmotions" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "sharePatterns" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "shareStats" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "shareTrades" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "totalPnL" DECIMAL(18,2) NOT NULL DEFAULT 0,
+ADD COLUMN     "totalTrades" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "winRate" DECIMAL(5,2) NOT NULL DEFAULT 0;
