@@ -8,7 +8,7 @@ import bcrypt from 'bcrypt';
  * Request password reset
  * Generates a reset token and sends email
  */
-export const requestPasswordReset = async (req: Request, res: Response): Promise<void> => {
+export const requestPasswordReset = async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
 
@@ -56,13 +56,13 @@ export const requestPasswordReset = async (req: Request, res: Response): Promise
       // Don't expose email sending errors to user
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: 'If an account exists with this email, a password reset link has been sent',
     });
   } catch (error) {
     console.error('Password reset request error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to process password reset request',
     });
@@ -72,7 +72,7 @@ export const requestPasswordReset = async (req: Request, res: Response): Promise
 /**
  * Reset password with token
  */
-export const resetPassword = async (req: Request, res: Response): Promise<void> => {
+export const resetPassword = async (req: Request, res: Response) => {
   try {
     const { token, newPassword } = req.body;
 
@@ -123,13 +123,13 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
       },
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: 'Password has been reset successfully',
     });
   } catch (error) {
     console.error('Password reset error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to reset password',
     });
