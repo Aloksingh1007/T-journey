@@ -19,7 +19,8 @@ const UserSearch: React.FC = () => {
     if (avatarPath.startsWith('http://') || avatarPath.startsWith('https://')) {
       return avatarPath;
     }
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    // Remove /api from VITE_API_URL for file uploads
+    const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace('/api', '');
     return `${baseUrl}${avatarPath}`;
   };
 

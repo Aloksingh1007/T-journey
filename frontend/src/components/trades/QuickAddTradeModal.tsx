@@ -55,15 +55,11 @@ const QuickAddTradeModal: React.FC<QuickAddTradeModalProps> = ({ isOpen, onClose
     const sellPrice = parseFloat(formData.avgSellPrice);
     const size = parseFloat(formData.positionSize);
 
-    let pnl = 0;
-    if (formData.tradeDirection === 'BUY_LONG') {
-      pnl = (sellPrice - buyPrice) * size;
-    } else {
-      pnl = (buyPrice - sellPrice) * size;
-    }
+    // Convert date to ISO datetime string
+    const tradeDateTime = new Date(formData.tradeDate).toISOString();
 
     const tradeData: CreateTradeDTO = {
-      tradeDate: formData.tradeDate,
+      tradeDate: tradeDateTime,
       entryTime: '09:00',
       exitTime: '15:30',
       tradeType: formData.tradeType,
@@ -73,7 +69,6 @@ const QuickAddTradeModal: React.FC<QuickAddTradeModalProps> = ({ isOpen, onClose
       avgSellPrice: sellPrice,
       positionSize: size,
       baseCurrency: formData.baseCurrency,
-      pnl: pnl,
       emotionalState: formData.emotionalState,
       isImpulsive: false,
     };
