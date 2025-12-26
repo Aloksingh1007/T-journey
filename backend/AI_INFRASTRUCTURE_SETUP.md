@@ -14,7 +14,7 @@ Task 18 "Setup AI service infrastructure" has been successfully completed. This 
 
 **Environment Variables Added:**
 ```env
-OPENAI_API_KEY=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
+OPENAI_API_KEY=your-openai-api-key-here
 
 OPENAI_MODEL=gpt-4
 OPENAI_MAX_TOKENS=2000
