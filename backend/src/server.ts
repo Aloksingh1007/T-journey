@@ -26,12 +26,12 @@ const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors({
-     origin: [
-       'http://localhost:5173',
-       'https://t-journey.vercel.app/', // Your Vercel URL
-     ],
-     credentials: true,
-   }));
+  origin: [
+    'http://localhost:5173',
+    'https://t-journey.vercel.app', // Your Vercel URL (no trailing slash)
+  ],
+  credentials: true,
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
