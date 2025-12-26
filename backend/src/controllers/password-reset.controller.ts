@@ -8,7 +8,7 @@ import bcrypt from 'bcrypt';
  * Request password reset
  * Generates a reset token and sends email
  */
-export const requestPasswordReset = async (req: Request, res: Response) => {
+export const requestPasswordReset = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email } = req.body;
 
@@ -72,7 +72,7 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
 /**
  * Reset password with token
  */
-export const resetPassword = async (req: Request, res: Response) => {
+export const resetPassword = async (req: Request, res: Response): Promise<void> => {
   try {
     const { token, newPassword } = req.body;
 
